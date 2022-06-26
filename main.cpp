@@ -1,6 +1,11 @@
 #include <limits>
+#include <vector>
+#include <iostream>
 #include "model.h"
 #include "our_gl.h"
+#include "tgaimage.h"
+#include "drawtools.h"
+
 
 constexpr int width  = 800; // output image size
 constexpr int height = 800;
@@ -9,6 +14,11 @@ const vec3 light_dir(1,1,1); // light source
 const vec3       eye(1,1,3); // camera position
 const vec3    center(0,0,0); // camera direction
 const vec3        up(0,1,0); // camera up vector
+
+const TGAColor white = TGAColor(255, 255, 255, 255);
+const TGAColor red = TGAColor(255, 0, 0, 255);
+
+using namespace std;
 
 extern mat<4,4> ModelView; // "OpenGL" state matrices
 extern mat<4,4> Projection;
@@ -56,8 +66,84 @@ struct Shader : IShader {
     }
 };
 
+/* void line(int x0, int y0, int x1, int y1, TGAImage& image, TGAColor color) {
+    bool steep = false;
+    if (abs(x0 - x1) < abs(y0 - y1)) {
+        swap(x0, y0);
+        swap(x1, y1);
+        steep = true;
+    }
+    if (x0 > x1) {
+        swap(x0, x1);
+        swap(y0, y1);
+    }
+    int dx = x1 - x0;
+    int dy = y1 - y0;
+    int derror = 2*abs(dy);
+    // cout << derror << endl;
+    int error = 0.0;
+    int y = y0;
+
+    for (int x = x0; x <= x1; x++) {
+        if (steep) {
+            image.set(y, x, color);
+        }
+        else {
+            image.set(x, y, color);
+        }
+        error += derror;
+        if (error > dx) {
+            if (y1 > y0) {
+                y += 1;
+            }
+            else {
+                y -= 1;
+            }
+            error -= 2*dx;
+        }
+    }
+    
+}
+
+void triangle(int x0, int y0, int x1, int y1, int x2, int y2, TGAImage &image, TGAColor color) {
+    line(x0, y0, x1, y1, image, color);
+    line(x1, y1, x2, y2, image, color);
+    line(x0, y0, x2, y2, image, color); 
+} */
+
+
 int main(int argc, char** argv) {
-    if (2>argc) {
+    TGAImage image(width, height, TGAImage::RGB);
+    // TGAImage* imptr = &image;
+    Model* model = new Model("../../obj/diablo3_pose/diablo3_pose.obj");
+    // Model* model = new Model("../../obj/african_head/african_head.obj");
+    vec3 lightdir = vec3{0.0, 0.0, -1.0};
+    double* zbuff = new double[width * height];
+
+
+    // render_wireframe(model, width, height, image, white);
+    // triangle_bary(10, 50, 450, 290, 100, 490, image, red);
+    // triangle_bary(10, 10, 100, 30, 190, 160, image, red);
+    render_triangles(model, width, height, image, lightdir, true, zbuff, true);
+    // y_buffer_test(image);
+    // image.flip_vertically();
+   
+
+    vec3 ax = vec3{ 40., 30., -10. };
+    vec3 ay = vec3{ 2., 15., -12. };
+    vec3 bary = bary_coords(ax, ay);
+    vec3 p = vec3{ 30, 42, 0.07 };
+    cout << p * bary;
+    write_image("z_buffer_test", image);
+    delete[] zbuff;
+    return 0;
+
+
+
+
+
+
+    /* if (2>argc) {
         std::cerr << "Usage: " << argv[0] << " obj/model.obj" << std::endl;
         return 1;
     }
@@ -78,6 +164,6 @@ int main(int argc, char** argv) {
         }
     }
     framebuffer.write_tga_file("framebuffer.tga"); // the vertical flip is moved inside the function
-    return 0;
+    return 0; */
 }
 

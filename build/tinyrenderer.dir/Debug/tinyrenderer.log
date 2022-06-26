@@ -1,0 +1,21 @@
+﻿  Building Custom Rule C:/Users/brand/OneDrive/Documents/cpp/tinyrenderer/CMakeLists.txt
+  geometry.cpp
+  main.cpp
+C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\our_gl.h(10,53): warning C4244: 'argument': conversion from 'double' to 'const int', possible loss of data
+C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\our_gl.h(10,31): warning C4244: 'argument': conversion from 'double' to 'const int', possible loss of data
+C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\main.cpp(53,48): warning C4244: 'argument': conversion from 'double' to 'const _Ty', possible loss of data
+          with
+          [
+              _Ty=int
+          ]
+  model.cpp
+C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\model.cpp(54,24): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\model.cpp(58,30): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\model.cpp(77,64): warning C4244: 'argument': conversion from 'double' to 'const int', possible loss of data
+C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\model.cpp(77,38): warning C4244: 'argument': conversion from 'double' to 'const int', possible loss of data
+  our_gl.cpp
+C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\our_gl.h(10,53): warning C4244: 'argument': conversion from 'double' to 'const int', possible loss of data
+C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\our_gl.h(10,31): warning C4244: 'argument': conversion from 'double' to 'const int', possible loss of data
+  tgaimage.cpp
+  Generating Code...
+  tinyrenderer.vcxproj -> C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\build\Debug\tinyrenderer.exe
