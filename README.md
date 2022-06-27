@@ -1,4 +1,4 @@
-# Tiny Renderer or how OpenGL works: software rendering in 500 lines of code
+# My attempt to implement "Tiny Renderer or how OpenGL works: software rendering"
 
 # Check [the wiki](https://github.com/ssloy/tinyrenderer/wiki) for the detailed lessons.
 
