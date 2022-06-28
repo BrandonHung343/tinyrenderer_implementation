@@ -5,14 +5,26 @@
 #include "geometry.h"
 #include <vector>
 #include <fstream>
+#include <Eigen/Dense>
 
 typedef std::tuple<int, int> tuple2;
 typedef std::tuple<int, int, vec2> tuple3;
 
+using Eigen::MatrixXd;
+using Eigen::Vector4d;
 
 
 
-
+MatrixXd view_port (int x, int y, int w, int h, int d) {
+    MatrixXd V = MatrixXd::Identity(4, 4);
+    V(0, 0) = w / 2.f;
+    V(1, 1) = h / 2.f;
+    V(2, 2) = d / 2.f;
+    V(0, 3) = x + V(0, 0);
+    V(1, 3) = y + V(1, 1);
+    V(2, 3) = V(2, 2);
+    return V;
+}
 
 int roundToInt(double n) {
     if (((int)(n * 10) % 10) >= 5) {
@@ -261,7 +273,6 @@ void triangle_bary_texture(int x0, int y0, double z0, int x1, int y1, double z1,
     int tex_x;
 
 
-
     for (int x = *minX; x < *maxX; x++) {
         for (int y = *minY; y < *maxY; y++) {
             idx = y * width + x;
@@ -336,7 +347,7 @@ double dot(vec3 v, vec3 u) {
 
 
 
-void render_triangles(Model* model, int width, int height, TGAImage& image, vec3 lightdir, bool hidden, double * zbuff, bool texture) {
+void render_triangles(Model* model, int width, int height, TGAImage& image, vec3 lightdir, bool hidden, double * zbuff, bool texture, double perspective) {
     // loop through the faces, which hold a bunch of vertices which have coords
     int x0;
     int x1;
@@ -344,11 +355,24 @@ void render_triangles(Model* model, int width, int height, TGAImage& image, vec3
     int y0;
     int y1;
     int y2;
+    double z0;
+    double z1;
+    double z2;
     vec3 v0;
     vec3 v1;
     vec3 v2;
-
     TGAImage diff_map = model->diffuse();
+    std::ofstream out;
+    out.open("log_coords.txt");
+
+    // Calculate the perspective shift
+    MatrixXd H(4, 4);
+    H = MatrixXd::Identity(4, 4);
+    if (perspective != 0.0) {
+        H(3, 2) = -1 / perspective;
+    }
+
+    MatrixXd V = view_port(width / 8, height / 8, width * 3 / 4, height * 3 / 4, 255);
 
     for (int i = 0; i < width * height; i++) {
         zbuff[i] = -std::numeric_limits<float>::max();
@@ -361,12 +385,48 @@ void render_triangles(Model* model, int width, int height, TGAImage& image, vec3
         v1 = model->vert(i, 1);
         v2 = model->vert(i, 2);
 
-        x0 = roundToInt((v0.x + 1.0) * width / 2.0);
-        y0 = roundToInt((v0.y + 1.0) * height / 2.0);
-        x1 = roundToInt((v1.x + 1.0) * width / 2.0);
-        y1 = roundToInt((v1.y + 1.0) * height / 2.0);
-        x2 = roundToInt((v2.x + 1.0) * width / 2.0);
-        y2 = roundToInt((v2.y + 1.0) * height / 2.0);
+
+        // Find the perspective transform, and apply it
+        Vector4d v0p { v0.x, v0.y, v0.z, 1.0 };
+        Vector4d v1p { v1.x, v1.y, v1.z, 1.0};
+        Vector4d v2p { v2.x, v2.y, v2.z, 1.0 };
+
+        // We need a viewport matrix in order to get this to work. 
+        if (perspective == 0.0) {
+            x0 = roundToInt((v0p(0) + 1.0) * width / 2.0);
+            y0 = roundToInt((v0p(1) + 1.0) * height / 2.0);
+            z0 = v0p(2);
+            x1 = roundToInt((v1p(0) + 1.0) * width / 2.0);
+            y1 = roundToInt((v1p(1) + 1.0) * height / 2.0);
+            z1 = v1p(2);
+            x2 = roundToInt((v2p(0) + 1.0) * width / 2.0);
+            y2 = roundToInt((v2p(1) + 1.0) * height / 2.0);
+            z2 = v2p(2);
+        }
+        else {
+            v0p = V * H * v0p;
+            v1p = V * H * v1p;
+            v2p = V * H * v2p;
+
+            v0p /= v0p(3);
+            v1p /= v1p(3);
+            v2p /= v2p(3);
+
+            x0 = roundToInt(v0p(0));
+            y0 = roundToInt(v0p(1));
+            z0 = v0p(2);
+            x1 = roundToInt(v1p(0));
+            y1 = roundToInt(v1p(1));
+            z1 = v1p(2);
+            x2 = roundToInt(v2p(0));
+            y2 = roundToInt(v2p(1));
+            z2 = v2p(2);
+            out << v0p << std::endl;
+            out << v1p << std::endl;
+            out << v2p << std::endl;
+        }
+      
+
         
         // compute the normal of the triangle by taking a cross product
         vec3 n = cross(v2 - v0, v1 - v0);
@@ -386,10 +446,10 @@ void render_triangles(Model* model, int width, int height, TGAImage& image, vec3
                 vec2 uv0 = model->uv(i, 0);
                 vec2 uv1 = model->uv(i, 1);
                 vec2 uv2 = model->uv(i, 2);
-                triangle_bary_texture(x0, y0, v0.z, x1, y1, v1.z, x2, y2, v2.z, image, diff_map, zbuff, width, uv0, uv1, uv2, intensity);
+                triangle_bary_texture(x0, y0, z0, x1, y1, z1, x2, y2, z2, image, diff_map, zbuff, width, uv0, uv1, uv2, intensity);
             }
             else if (hidden) {
-                triangle_bary_hidden(x0, y0, v0.z, x1, y1, v1.z, x2, y2, v2.z, image, TGAColor(scaledInt, scaledInt, scaledInt, 255), zbuff, width);
+                triangle_bary_hidden(x0, y0, z0, x1, y1, z1, x2, y2, z2, image, TGAColor(scaledInt, scaledInt, scaledInt, 255), zbuff, width);
             }
             else {
                 triangle_bary(x0, y0, x1, y1, x2, y2, image, TGAColor(scaledInt, scaledInt, scaledInt, 255));
@@ -397,6 +457,7 @@ void render_triangles(Model* model, int width, int height, TGAImage& image, vec3
         }
         
     }
+    out.close();
     
 }
 

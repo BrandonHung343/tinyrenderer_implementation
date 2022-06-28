@@ -115,8 +115,8 @@ void triangle(int x0, int y0, int x1, int y1, int x2, int y2, TGAImage &image, T
 int main(int argc, char** argv) {
     TGAImage image(width, height, TGAImage::RGB);
     // TGAImage* imptr = &image;
-    Model* model = new Model("../../obj/diablo3_pose/diablo3_pose.obj");
-    // Model* model = new Model("../../obj/african_head/african_head.obj");
+    // Model* model = new Model("../../obj/diablo3_pose/diablo3_pose.obj");
+    Model* model = new Model("../../obj/african_head/african_head.obj");
     vec3 lightdir = vec3{0.0, 0.0, -1.0};
     double* zbuff = new double[width * height];
 
@@ -124,17 +124,19 @@ int main(int argc, char** argv) {
     // render_wireframe(model, width, height, image, white);
     // triangle_bary(10, 50, 450, 290, 100, 490, image, red);
     // triangle_bary(10, 10, 100, 30, 190, 160, image, red);
-    render_triangles(model, width, height, image, lightdir, true, zbuff, true);
+    render_triangles(model, width, height, image, lightdir, true, zbuff, true, 3.0);
     // y_buffer_test(image);
     // image.flip_vertically();
    
 
-    vec3 ax = vec3{ 40., 30., -10. };
-    vec3 ay = vec3{ 2., 15., -12. };
-    vec3 bary = bary_coords(ax, ay);
-    vec3 p = vec3{ 30, 42, 0.07 };
-    cout << p * bary;
-    write_image("z_buffer_test", image);
+    // vec3 ax = vec3{ 40., 30., -10. };
+    // vec3 ay = vec3{ 2., 15., -12. };
+    // vec3 bary = bary_coords(ax, ay);
+    // vec3 p = vec3{ 30, 42, 0.07 };
+    // cout << p * bary;
+    // write_image("z_buffer_test", image);
+    write_image("perspective_test", image);
+    cout << "written to file";
     delete[] zbuff;
     return 0;
 
