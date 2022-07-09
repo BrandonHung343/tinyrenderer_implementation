@@ -12,6 +12,8 @@ if(OPENMP_FOUND)
 endif()
 
 
+
+
 # You have to set these variables as Windows environment variables:
 # EIGEN3_INCLUDE_DIR <- %EIGEN3_ROOT%
 # EIGEN3_DIR <- %EIGEN3_ROOT%\cmake
@@ -31,8 +33,9 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-file(GLOB SOURCES *.h *.cpp)
-
+file(GLOB SOURCES ${PROJECT_SOURCE_DIR}/*.h ${PROJECT_SOURCE_DIR}/*.cpp)
+# add_library(${PROJECT_NAME} imagedata.cpp)
 add_executable(${PROJECT_NAME} ${SOURCES})
+
 # target_link_libraries(${PROJECT_NAME} ${Eigen_LIBRARIES})
 

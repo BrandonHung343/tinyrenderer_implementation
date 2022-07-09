@@ -5,7 +5,10 @@
 #include "geometry.h"
 #include <vector>
 #include <fstream>
+#include <cmath>
 #include <Eigen/Dense>
+#include "imagedata.h"
+#include "shader.h"
 
 typedef std::tuple<int, int> tuple2;
 typedef std::tuple<int, int, vec2> tuple3;
@@ -15,17 +18,6 @@ using Eigen::Vector4d;
 
 
 
-MatrixXd view_port (int x, int y, int w, int h, int d) {
-    MatrixXd V = MatrixXd::Identity(4, 4);
-    V(0, 0) = w / 2.f;
-    V(1, 1) = h / 2.f;
-    V(2, 2) = d / 2.f;
-    V(0, 3) = x + V(0, 0);
-    V(1, 3) = y + V(1, 1);
-    V(2, 3) = V(2, 2);
-    return V;
-}
-
 int roundToInt(double n) {
     if (((int)(n * 10) % 10) >= 5) {
         return (int)n + 1;
@@ -34,7 +26,6 @@ int roundToInt(double n) {
         return (int)n;
     }
 }
-
 
 
 
@@ -76,7 +67,6 @@ void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color) {
     }
 
 }
-
 
 
 
@@ -132,11 +122,31 @@ vec3 bary_coords(vec3 xVec, vec3 yVec) {
         
     }
     return vec3{ -1.0, 1.0, 1.0 };
-    
-
 }
 
 
+
+vec3 barycentric(vec3 v0, vec3 v1, vec3 v2, vec2 P) {
+    Eigen::Matrix3d ABC;
+    ABC(0, 0) = v0.x;
+    ABC(1, 0) = v0.y;
+    ABC(2, 0) = v0.z;
+
+    ABC(0, 1) = v1.x;
+    ABC(1, 1) = v1.y;
+    ABC(2, 1) = v1.z;
+
+    ABC(0, 2) = v2.x;
+    ABC(1, 2) = v2.y;
+    ABC(2, 2) = v2.z;
+
+    if (ABC.determinant() < 1e-3) {
+        return vec3{ -1.0, 1.0, 1.0 };
+    }
+    Eigen::Vector3d p3( P.x, P.y, 1.0 );
+    p3 = ABC.inverse().transpose() * p3;
+    return vec3{ p3[0], p3[1], p3[2] };
+}
 
 
 void triangle_bary(int x0, int y0, int x1, int y1, int x2, int y2, TGAImage& image, TGAColor color) {
@@ -176,7 +186,7 @@ void triangle_bary(int x0, int y0, int x1, int y1, int x2, int y2, TGAImage& ima
 
 
 
-void triangle_bary_hidden(int x0, int y0, double z0, int x1, int y1, double z1, int x2, int y2, double z2, TGAImage& image, TGAColor color, double *zbuff, int width) {
+void triangle_bary_hidden(int x0, int y0, double z0, int x1, int y1, double z1, int x2, int y2, double z2, TGAImage& image, TGAColor color, double* zbuff, int width) {
     // Get the bounding box based on the sizes
     int xVals[] = { x0, x1, x2 };
     int yVals[] = { y0, y1, y2 };
@@ -197,8 +207,6 @@ void triangle_bary_hidden(int x0, int y0, double z0, int x1, int y1, double z1, 
     vec3 bary;
     int idx;
     double z;
-    int tex_y;
-    int tex_x;
 
 
     for (int x = *minX; x < *maxX; x++) {
@@ -219,8 +227,6 @@ void triangle_bary_hidden(int x0, int y0, double z0, int x1, int y1, double z1, 
         }
     }
 }
-
-
 
 
 
@@ -247,9 +253,22 @@ void rasterize(int x0, int y0, int x1, int y1, TGAImage& image, TGAColor color, 
 
 
 
-
-void triangle_bary_texture(int x0, int y0, double z0, int x1, int y1, double z1, int x2, int y2, double z2, TGAImage& image, TGAImage& diffuse_map, double* zbuff, int width, vec2 uv0, vec2 uv1, vec2 uv2, double intensity) {
+void triangle_bary_texture(Shader* shader, Eigen::Vector4d V0, Eigen::Vector4d V1, Eigen::Vector4d V2, TGAImage& image, TGAImage& diffuseMap, double* zbuff, double* xbuff, double* ybuff, int width) {
     // Get the bounding box based on the sizes
+
+    vec3 v0 = shader->project(V0);
+    vec3 v1 = shader->project(V1);
+    vec3 v2 = shader->project(V2);
+
+    int x0 = v0.x;
+    int x1 = v1.x;
+    int x2 = v2.x;
+    int y0 = v0.y;
+    int y1 = v1.y;
+    int y2 = v2.y;
+
+    
+    
     int xVals[] = { x0, x1, x2 };
     int yVals[] = { y0, y1, y2 };
     int* minX = std::min_element(std::begin(xVals), std::end(xVals));
@@ -264,40 +283,42 @@ void triangle_bary_texture(int x0, int y0, double z0, int x1, int y1, double z1,
     double ACy = (double)(y2 - y0);
     double PAx;
     double PAy;
+
     vec3 xVec;
     vec3 yVec;
     vec3 bary;
     int idx;
     double z;
-    int tex_y;
-    int tex_x;
+    double w;
+    bool discard;
+    TGAColor color = TGAColor(255, 255, 255, 255);
+    
 
 
-    for (int x = *minX; x < *maxX; x++) {
-        for (int y = *minY; y < *maxY; y++) {
+    for (int x = *minX; x <= *maxX; x++) {
+        for (int y = *minY; y <= *maxY; y++) {
             idx = y * width + x;
             PAx = (double)(x0 - x);
             PAy = (double)(y0 - y);
             xVec = vec3{ ACx, ABx, PAx };
             yVec = vec3{ ACy, ABy, PAy };
             bary = bary_coords(xVec, yVec);
-            if (!((bary.x < 0) || (bary.y < 0) || (bary.z < 0))) {
-                z = bary.x * z0 + bary.y * z1 + bary.y * z2;
-
+            // bary = barycentric(v0, v1, v2, vec2(x, y));
+            z = bary.x * V0[2] + bary.y * V1[2] + bary.y * V2[2];
+            // w = bary.x * V0[3] + bary.y * V1[3] + bary.y * V2[3]; 
+            vec3 bary_vp = vec3{ bary.x / V0[3], bary.y / V1[3], bary.z / V2[3] };
+            bary_vp = bary_vp / (bary_vp.x + bary_vp.y + bary_vp.z);
+            // int frag_depth = std::max(0, std::min(255, int(z/w + 0.5)));
+            
+            double frag_depth = bary_vp * shader->unview(V0, V1, V2);
+            if (!((bary.x < 0) || (bary.y < 0) || (bary.z < 0) || (zbuff[idx] > frag_depth))) {
                 /* Recall that barycentric coordinates are themselves an interpolation within a triangle. In essence, the 
                    x y and z for the barycentric coordinates can b multiplied with the x, y, and z components of the three 
                    vertices to interpolate inside a triangle. This lets us map a point inside the triangle to a point in
                    another image or map corresponding to the image. */
-                tex_x = roundToInt((uv0.x * bary.x + uv1.x * bary.y + uv2.x * bary.z) * (double)diffuse_map.width());
-                tex_y = roundToInt((uv0.y * bary.x + uv1.y * bary.y + uv2.y * bary.z) * (double)diffuse_map.height());
-                if (z > zbuff[idx]) {
-                    TGAColor color = diffuse_map.get(tex_x, tex_y);
-                    int b = roundToInt(color.bgra[0] * intensity);
-                    int g = roundToInt(color.bgra[1] * intensity);
-                    int r = roundToInt(color.bgra[2] * intensity);
-                    int a = roundToInt(color.bgra[3]);
-                    color = TGAColor(r, g, b, a);
-                    zbuff[idx] = z;
+                discard = shader->frag(bary, diffuseMap, color);
+                if (!discard) {
+                    zbuff[idx] = frag_depth;
                     image.set(x, y, color);
                 }
             }
@@ -347,117 +368,75 @@ double dot(vec3 v, vec3 u) {
 
 
 
-void render_triangles(Model* model, int width, int height, TGAImage& image, vec3 lightdir, bool hidden, double * zbuff, bool texture, double perspective) {
-    // loop through the faces, which hold a bunch of vertices which have coords
-    int x0;
-    int x1;
-    int x2;
-    int y0;
-    int y1;
-    int y2;
-    double z0;
-    double z1;
-    double z2;
-    vec3 v0;
-    vec3 v1;
-    vec3 v2;
+int compute_intensity(ImageData* imData, vec3 v0, vec3 v1, vec3 v2) {
+    vec3 n = cross(v2 - v0, v1 - v0);
+    n.normalize();
+
+    // Compute the intensity of the light on the face
+    double intensity = n * imData->get_ld();
+    return intensity * 255;
+}
+
+
+int cull(ImageData* imData, vec3 v0, vec3 v1, vec3 v2) {
+    vec3 n = cross(v2 - v0, v1 - v0);
+    n.normalize();
+    vec3 view = imData->get_cam_origin() - v1;
+    view.normalize();
+
+    // Compute the intensity of the light on the 
+    return (view * n) < 0;
+}
+
+
+
+void render_triangles(Model* model, Shader* shader, TGAImage& image, double* zbuff, double* xbuff, double* ybuff, bool texture, bool hidden) {
+    // Grab some basic information from our params
+    int width = shader->width;
+    int height = shader->height;
+    int depth = shader->depth;
     TGAImage diff_map = model->diffuse();
-    std::ofstream out;
-    out.open("log_coords.txt");
-
-    // Calculate the perspective shift
-    MatrixXd H(4, 4);
-    H = MatrixXd::Identity(4, 4);
-    if (perspective != 0.0) {
-        H(3, 2) = -1 / perspective;
-    }
-
-    MatrixXd V = view_port(width / 8, height / 8, width * 3 / 4, height * 3 / 4, 255);
-
-    for (int i = 0; i < width * height; i++) {
-        zbuff[i] = -std::numeric_limits<float>::max();
-    }
 
     
+    //Debugging only: 
+    // std::ofstream out;
+    // out.open("log_coords.txt"); 
+
 
     for (int i = 0; i < model->nfaces(); i++) {
-        v0 = model->vert(i, 0);
-        v1 = model->vert(i, 1);
-        v2 = model->vert(i, 2);
-
+        // bool goCull = cull(imData, v0, v1, v2);
+        
 
         // Find the perspective transform, and apply it
-        Vector4d v0p { v0.x, v0.y, v0.z, 1.0 };
-        Vector4d v1p { v1.x, v1.y, v1.z, 1.0};
-        Vector4d v2p { v2.x, v2.y, v2.z, 1.0 };
-
-        // We need a viewport matrix in order to get this to work. 
-        if (perspective == 0.0) {
-            x0 = roundToInt((v0p(0) + 1.0) * width / 2.0);
-            y0 = roundToInt((v0p(1) + 1.0) * height / 2.0);
-            z0 = v0p(2);
-            x1 = roundToInt((v1p(0) + 1.0) * width / 2.0);
-            y1 = roundToInt((v1p(1) + 1.0) * height / 2.0);
-            z1 = v1p(2);
-            x2 = roundToInt((v2p(0) + 1.0) * width / 2.0);
-            y2 = roundToInt((v2p(1) + 1.0) * height / 2.0);
-            z2 = v2p(2);
-        }
-        else {
-            v0p = V * H * v0p;
-            v1p = V * H * v1p;
-            v2p = V * H * v2p;
-
-            v0p /= v0p(3);
-            v1p /= v1p(3);
-            v2p /= v2p(3);
-
-            x0 = roundToInt(v0p(0));
-            y0 = roundToInt(v0p(1));
-            z0 = v0p(2);
-            x1 = roundToInt(v1p(0));
-            y1 = roundToInt(v1p(1));
-            z1 = v1p(2);
-            x2 = roundToInt(v2p(0));
-            y2 = roundToInt(v2p(1));
-            z2 = v2p(2);
-            out << v0p << std::endl;
-            out << v1p << std::endl;
-            out << v2p << std::endl;
-        }
-      
+        Vector4d V0 = shader->vertex(i, 0);
+        Vector4d V1 = shader->vertex(i, 1);
+        Vector4d V2 = shader->vertex(i, 2);
 
         
-        // compute the normal of the triangle by taking a cross product
-        vec3 n = cross(v2 - v0, v1 - v0);
-        lightdir.normalize();
-        n.normalize();
+        /* Debugging only
+        out << v0p << std::endl;
+        out << v1p << std::endl;
+        out << v2p << std::endl;*/ 
+        // out << i << std::endl;
+
         
-        // Compute the intensity of the light on the face
-        double intensity = n * lightdir;
-        int scaledInt = intensity * 255;
 
         // Render the non-negatively oriented vector 
-        if (scaledInt > 0) {
-            scaledInt = (scaledInt > 255) ? 255 : scaledInt;
+       
 
-            // If we are applying texture, then we find the values
-            if ((hidden) && (texture)) {
-                vec2 uv0 = model->uv(i, 0);
-                vec2 uv1 = model->uv(i, 1);
-                vec2 uv2 = model->uv(i, 2);
-                triangle_bary_texture(x0, y0, z0, x1, y1, z1, x2, y2, z2, image, diff_map, zbuff, width, uv0, uv1, uv2, intensity);
-            }
-            else if (hidden) {
-                triangle_bary_hidden(x0, y0, z0, x1, y1, z1, x2, y2, z2, image, TGAColor(scaledInt, scaledInt, scaledInt, 255), zbuff, width);
-            }
-            else {
-                triangle_bary(x0, y0, x1, y1, x2, y2, image, TGAColor(scaledInt, scaledInt, scaledInt, 255));
-            }
+        // If we are applying texture, then we find the values
+        if ((hidden) && (texture)) {
+            triangle_bary_texture(shader, V0, V1, V2, image, diff_map, zbuff, xbuff, ybuff, width);
         }
+        /*else if (hidden) {
+            triangle_bary_hidden(x0, y0, z0, x1, y1, z1, x2, y2, z2, image, TGAColor(scaledInt, scaledInt, scaledInt, 255), zbuff, width);
+        }
+        else {
+            triangle_bary(x0, y0, x1, y1, x2, y2, image, TGAColor(scaledInt, scaledInt, scaledInt, 255));
+        }*/
         
     }
-    out.close();
+    // out.close();
     
 }
 

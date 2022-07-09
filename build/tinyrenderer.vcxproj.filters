@@ -7,6 +7,9 @@
     <ClCompile Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\geometry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\imagedata.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -14,6 +17,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\our_gl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\shader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\tgaimage.cpp">
@@ -27,10 +33,16 @@
     <ClInclude Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\geometry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\imagedata.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\our_gl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\tgaimage.h">

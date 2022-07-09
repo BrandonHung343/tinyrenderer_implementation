@@ -325,11 +325,15 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\drawtools.h" />
     <ClCompile Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\geometry.cpp" />
     <ClInclude Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\geometry.h" />
+    <ClCompile Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\imagedata.cpp" />
+    <ClInclude Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\imagedata.h" />
     <ClCompile Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\main.cpp" />
     <ClCompile Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\model.cpp" />
     <ClInclude Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\model.h" />
     <ClCompile Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\our_gl.cpp" />
     <ClInclude Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\our_gl.h" />
+    <ClCompile Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\shader.cpp" />
+    <ClInclude Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\shader.h" />
     <ClCompile Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\tgaimage.cpp" />
     <ClInclude Include="C:\Users\brand\OneDrive\Documents\cpp\tinyrenderer\tgaimage.h" />
   </ItemGroup>

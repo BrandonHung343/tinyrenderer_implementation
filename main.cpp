@@ -1,17 +1,25 @@
 #include <limits>
 #include <vector>
 #include <iostream>
-#include "model.h"
+// #include "model.h"
 #include "our_gl.h"
 #include "tgaimage.h"
 #include "drawtools.h"
+#include "imagedata.h"
+#include "shader.h"
+
+// TODO: Fix the weirdness where the z has to be inverted for some reason
+// TODO: Fix the weirdness of triangles not being filled in, despite existing on the texture map
+// TODO: Make the stuff more wieldy, maybe incorporate the buffers inside the image data
+
 
 
 constexpr int width  = 800; // output image size
 constexpr int height = 800;
+constexpr int depth = 255;
 
-const vec3 light_dir(1,1,1); // light source
-const vec3       eye(1,1,3); // camera position
+const vec3 light_dir(1,0, 2); // light source
+const vec3       eye(-1, -2,-3); // camera position
 const vec3    center(0,0,0); // camera direction
 const vec3        up(0,1,0); // camera up vector
 
@@ -23,7 +31,7 @@ using namespace std;
 extern mat<4,4> ModelView; // "OpenGL" state matrices
 extern mat<4,4> Projection;
 
-struct Shader : IShader {
+/*  struct Shader : IShader {
     const Model &model;
     vec3 uniform_l;       // light direction in view coordinates
     mat<2,3> varying_uv;  // triangle uv coordinates, written by the vertex shader, read by the fragment shader
@@ -64,52 +72,8 @@ struct Shader : IShader {
 
         return false; // the pixel is not discarded
     }
-};
+};*/
 
-/* void line(int x0, int y0, int x1, int y1, TGAImage& image, TGAColor color) {
-    bool steep = false;
-    if (abs(x0 - x1) < abs(y0 - y1)) {
-        swap(x0, y0);
-        swap(x1, y1);
-        steep = true;
-    }
-    if (x0 > x1) {
-        swap(x0, x1);
-        swap(y0, y1);
-    }
-    int dx = x1 - x0;
-    int dy = y1 - y0;
-    int derror = 2*abs(dy);
-    // cout << derror << endl;
-    int error = 0.0;
-    int y = y0;
-
-    for (int x = x0; x <= x1; x++) {
-        if (steep) {
-            image.set(y, x, color);
-        }
-        else {
-            image.set(x, y, color);
-        }
-        error += derror;
-        if (error > dx) {
-            if (y1 > y0) {
-                y += 1;
-            }
-            else {
-                y -= 1;
-            }
-            error -= 2*dx;
-        }
-    }
-    
-}
-
-void triangle(int x0, int y0, int x1, int y1, int x2, int y2, TGAImage &image, TGAColor color) {
-    line(x0, y0, x1, y1, image, color);
-    line(x1, y1, x2, y2, image, color);
-    line(x0, y0, x2, y2, image, color); 
-} */
 
 
 int main(int argc, char** argv) {
@@ -117,55 +81,44 @@ int main(int argc, char** argv) {
     // TGAImage* imptr = &image;
     // Model* model = new Model("../../obj/diablo3_pose/diablo3_pose.obj");
     Model* model = new Model("../../obj/african_head/african_head.obj");
-    vec3 lightdir = vec3{0.0, 0.0, -1.0};
+    Shader* shader = new Shader(width / 8, height / 8, width * 3 / 4, height * 3 / 4, depth, light_dir, center, eye, up);
+    shader->initialize(model);
+    // shader->set_model(model);
+    // shader->set_normal_map();
+    // shader->set_l();
+
     double* zbuff = new double[width * height];
+    double* xbuff = new double[width * height];
+    double* ybuff = new double[width * height];
+    // imData->force_pers(0.0);
+   //  cout << imData->per << endl;
+    for (int i = 0; i < width * height; i++) {
+        zbuff[i] = -std::numeric_limits<int>::max();
+    }
 
-
+    // cout << imData->transformV(Vector4d( 0, 0, -25, 1 )) << endl;
     // render_wireframe(model, width, height, image, white);
-    // triangle_bary(10, 50, 450, 290, 100, 490, image, red);
-    // triangle_bary(10, 10, 100, 30, 190, 160, image, red);
-    render_triangles(model, width, height, image, lightdir, true, zbuff, true, 3.0);
-    // y_buffer_test(image);
+    
+    render_triangles(model, shader, image, zbuff, xbuff, ybuff, true, true);
     // image.flip_vertically();
    
 
-    // vec3 ax = vec3{ 40., 30., -10. };
-    // vec3 ay = vec3{ 2., 15., -12. };
-    // vec3 bary = bary_coords(ax, ay);
-    // vec3 p = vec3{ 30, 42, 0.07 };
-    // cout << p * bary;
     // write_image("z_buffer_test", image);
-    write_image("perspective_test", image);
-    cout << "written to file";
-    delete[] zbuff;
-    return 0;
-
-
-
-
-
-
-    /* if (2>argc) {
-        std::cerr << "Usage: " << argv[0] << " obj/model.obj" << std::endl;
-        return 1;
-    }
-    TGAImage framebuffer(width, height, TGAImage::RGB); // the output image
-    lookat(eye, center, up);                            // build the ModelView matrix
-    viewport(width/8, height/8, width*3/4, height*3/4); // build the Viewport matrix
-    projection((eye-center).norm());                    // build the Projection matrix
-    std::vector<double> zbuffer(width*height, std::numeric_limits<double>::max());
-
-    for (int m=1; m<argc; m++) { // iterate through all input objects
-        Model model(argv[m]);
-        Shader shader(model);
-        for (int i=0; i<model.nfaces(); i++) { // for every triangle
-            vec4 clip_vert[3]; // triangle coordinates (clip coordinates), written by VS, read by FS
-            for (int j : {0,1,2})
-                shader.vertex(i, j, clip_vert[j]); // call the vertex shader for each triangle vertex
-            triangle(clip_vert, shader, framebuffer, zbuffer); // actual rasterization routine call
+    write_image("refactor_test", image);
+    /*std::ofstream out;
+    out.open("zbuff.txt");
+    for (int i = 0; i < width * height; i++) {
+        if (zbuff[i] > -std::numeric_limits<float>::max()) {
+            out << xbuff[i] << " " << ybuff[i] << " " << zbuff[i] << endl;
         }
+       
     }
-    framebuffer.write_tga_file("framebuffer.tga"); // the vertical flip is moved inside the function
-    return 0; */
+    out.close();*/
+    delete[] zbuff;
+    delete[] xbuff;
+    delete[] ybuff;
+    delete model;
+    delete shader;
+    return 0;
 }
 
