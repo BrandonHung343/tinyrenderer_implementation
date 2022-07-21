@@ -185,7 +185,6 @@ void triangle_bary(int x0, int y0, int x1, int y1, int x2, int y2, TGAImage& ima
 
 
 
-
 void triangle_bary_hidden(int x0, int y0, double z0, int x1, int y1, double z1, int x2, int y2, double z2, TGAImage& image, TGAColor color, double* zbuff, int width) {
     // Get the bounding box based on the sizes
     int xVals[] = { x0, x1, x2 };
@@ -253,7 +252,7 @@ void rasterize(int x0, int y0, int x1, int y1, TGAImage& image, TGAColor color, 
 
 
 
-void triangle_bary_texture(Shader* shader, Eigen::Vector4d V0, Eigen::Vector4d V1, Eigen::Vector4d V2, TGAImage& image, TGAImage& diffuseMap, double* zbuff, double* xbuff, double* ybuff, int width) {
+void triangle_bary_texture(Shader* shader, Eigen::Vector4d V0, Eigen::Vector4d V1, Eigen::Vector4d V2, TGAImage& image, TGAImage& diffMap, TGAImage& specMap, double* zbuff, double* xbuff, double* ybuff) {
     // Get the bounding box based on the sizes
 
     vec3 v0 = shader->project(V0);
@@ -289,7 +288,6 @@ void triangle_bary_texture(Shader* shader, Eigen::Vector4d V0, Eigen::Vector4d V
     vec3 bary;
     int idx;
     double z;
-    double w;
     bool discard;
     TGAColor color = TGAColor(255, 255, 255, 255);
     
@@ -297,7 +295,7 @@ void triangle_bary_texture(Shader* shader, Eigen::Vector4d V0, Eigen::Vector4d V
 
     for (int x = *minX; x <= *maxX; x++) {
         for (int y = *minY; y <= *maxY; y++) {
-            idx = y * width + x;
+            idx = y * shader->imWidth + x;
             PAx = (double)(x0 - x);
             PAy = (double)(y0 - y);
             xVec = vec3{ ACx, ABx, PAx };
@@ -316,7 +314,7 @@ void triangle_bary_texture(Shader* shader, Eigen::Vector4d V0, Eigen::Vector4d V
                    x y and z for the barycentric coordinates can b multiplied with the x, y, and z components of the three 
                    vertices to interpolate inside a triangle. This lets us map a point inside the triangle to a point in
                    another image or map corresponding to the image. */
-                discard = shader->frag(bary, diffuseMap, color);
+                discard = shader->frag(bary, diffMap, specMap, color);
                 if (!discard) {
                     zbuff[idx] = frag_depth;
                     image.set(x, y, color);
@@ -391,11 +389,8 @@ int cull(ImageData* imData, vec3 v0, vec3 v1, vec3 v2) {
 
 
 void render_triangles(Model* model, Shader* shader, TGAImage& image, double* zbuff, double* xbuff, double* ybuff, bool texture, bool hidden) {
-    // Grab some basic information from our params
-    int width = shader->width;
-    int height = shader->height;
-    int depth = shader->depth;
-    TGAImage diff_map = model->diffuse();
+    TGAImage diffMap = model->diffuse();
+    TGAImage specMap = model->specular();
 
     
     //Debugging only: 
@@ -426,7 +421,7 @@ void render_triangles(Model* model, Shader* shader, TGAImage& image, double* zbu
 
         // If we are applying texture, then we find the values
         if ((hidden) && (texture)) {
-            triangle_bary_texture(shader, V0, V1, V2, image, diff_map, zbuff, xbuff, ybuff, width);
+            triangle_bary_texture(shader, V0, V1, V2, image, diffMap, specMap, zbuff, xbuff, ybuff);
         }
         /*else if (hidden) {
             triangle_bary_hidden(x0, y0, z0, x1, y1, z1, x2, y2, z2, image, TGAColor(scaledInt, scaledInt, scaledInt, 255), zbuff, width);

@@ -18,8 +18,8 @@ constexpr int width  = 800; // output image size
 constexpr int height = 800;
 constexpr int depth = 255;
 
-const vec3 light_dir(1,0, 2); // light source
-const vec3       eye(-1, -2,-3); // camera position
+const vec3 light_dir(1, -0.5, -3); // light source
+const vec3       eye(1, 0,-3); // camera position
 const vec3    center(0,0,0); // camera direction
 const vec3        up(0,1,0); // camera up vector
 
@@ -82,15 +82,17 @@ int main(int argc, char** argv) {
     // Model* model = new Model("../../obj/diablo3_pose/diablo3_pose.obj");
     Model* model = new Model("../../obj/african_head/african_head.obj");
     Shader* shader = new Shader(width / 8, height / 8, width * 3 / 4, height * 3 / 4, depth, light_dir, center, eye, up);
-    shader->initialize(model);
-    // shader->set_model(model);
-    // shader->set_normal_map();
-    // shader->set_l();
+    shader->initialize(model, width);
+
 
     double* zbuff = new double[width * height];
     double* xbuff = new double[width * height];
     double* ybuff = new double[width * height];
-    // imData->force_pers(0.0);
+    TGAColor test = (model->specular()).get(600, 600);
+    // double specInt = 
+    cout << "test" << endl;
+    // cout << test.bgra[1] << test.bgra[2] << test.bgra[3] << endl;
+
    //  cout << imData->per << endl;
     for (int i = 0; i < width * height; i++) {
         zbuff[i] = -std::numeric_limits<int>::max();
@@ -104,7 +106,7 @@ int main(int argc, char** argv) {
    
 
     // write_image("z_buffer_test", image);
-    write_image("refactor_test", image);
+    write_image("spec_test", image);
     /*std::ofstream out;
     out.open("zbuff.txt");
     for (int i = 0; i < width * height; i++) {
