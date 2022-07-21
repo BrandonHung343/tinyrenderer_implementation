@@ -2,4 +2,5 @@ obj/
 .vs/
 out/
 images/
-build/Debug/
+build/Debug/*.pdb
+build/Debug/*.tga
