@@ -8,7 +8,7 @@ Eigen::Vector4d Shader::vertex(int face, int vert) {
 	textureX[vert] = uv.x;
 	textureY[vert] = uv.y;
 	Eigen::Vector4d v4(v.x, v.y, -v.z, 1.0 );
-	return V * H * C * v4;
+	return H * C * v4;
 }
 
 // Rotate the normals as well
@@ -48,6 +48,20 @@ vec3 Shader::project(Eigen::Vector4d V) {
 	return vec3{ V[0], V[1], V[2] };
 }
 
+
+Eigen::Vector4d Shader::embed(vec3 v, bool isPoint) {
+	Eigen::Vector4d V;
+	V[0] = v.x;
+	V[1] = v.y;
+	V[2] = v.z;
+	V[3] = 1.0;
+	if (isPoint) {
+		V[3] = 0.0;
+	}
+	return V;
+}
+
+
 void Shader::set_model(Model* m) {
 	model = m;
 }
@@ -67,8 +81,8 @@ void Shader::initialize(Model* m, int width) {
 	Eigen::Vector4d l4(lightdir.x, lightdir.y, lightdir.z, 0.0);
 	l = project(H * C * l4).normalize();
 	vp_inv = viewport().inverse();
-	specCoeff = 1.0;
-	diffCoeff = 1.0;
+	specCoeff = 0.2;
+	diffCoeff = 0.8;
 	ambiCoeff = 10.0;
 	imWidth = width;
 }

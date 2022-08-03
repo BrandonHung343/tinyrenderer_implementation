@@ -24,6 +24,7 @@ class Shader : public ImageData {
 		Eigen::Vector4d vertex(int face, int vert);
 		bool frag(vec3 bary, TGAImage& diffuseMap, TGAImage& specMap, TGAColor& color);
 		vec3 project(Eigen::Vector4d V); // Project 4d vector to 3d by normalizing by last coordinate
+		Eigen::Vector4d embed(vec3 v, bool isPoint); // Project 3d into 4d homogeneous coordinates
 		void set_normal_map();
 		void set_l();
 		void initialize(Model* m, int width);

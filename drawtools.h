@@ -252,8 +252,12 @@ void rasterize(int x0, int y0, int x1, int y1, TGAImage& image, TGAColor color, 
 
 
 
-void triangle_bary_texture(Shader* shader, Eigen::Vector4d V0, Eigen::Vector4d V1, Eigen::Vector4d V2, TGAImage& image, TGAImage& diffMap, TGAImage& specMap, double* zbuff, double* xbuff, double* ybuff) {
+void triangle_bary_texture(Shader* shader, Eigen::Vector4d H0, Eigen::Vector4d H1, Eigen::Vector4d H2, TGAImage& image, TGAImage& diffMap, TGAImage& specMap, double* zbuff, double* xbuff, double* ybuff) {
     // Get the bounding box based on the sizes
+
+    Eigen::Vector4d V0 = shader->V * H0;
+    Eigen::Vector4d V1 = shader->V * H1;
+    Eigen::Vector4d V2 = shader->V * H2;
 
     vec3 v0 = shader->project(V0);
     vec3 v1 = shader->project(V1);
@@ -308,7 +312,7 @@ void triangle_bary_texture(Shader* shader, Eigen::Vector4d V0, Eigen::Vector4d V
             bary_vp = bary_vp / (bary_vp.x + bary_vp.y + bary_vp.z);
             // int frag_depth = std::max(0, std::min(255, int(z/w + 0.5)));
             
-            double frag_depth = bary_vp * shader->unview(V0, V1, V2);
+            double frag_depth = bary_vp * vec3{ H0[2], H1[2], H2[2] };
             if (!((bary.x < 0) || (bary.y < 0) || (bary.z < 0) || (zbuff[idx] > frag_depth))) {
                 /* Recall that barycentric coordinates are themselves an interpolation within a triangle. In essence, the 
                    x y and z for the barycentric coordinates can b multiplied with the x, y, and z components of the three 
