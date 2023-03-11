@@ -4,7 +4,7 @@
 
 ## compilation
 ```sh
-git clone https://github.com/ssloy/tinyrenderer.git &&
+git clone https://github.com/BrandonHung343/tinyrenderer_implementation.git &&
 cd tinyrenderer &&
 mkdir build &&
 cd build &&
